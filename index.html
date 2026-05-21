@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTC Signal Simulator</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #58a6ff;
+            text-align: center;
+            border-bottom: 2px solid #30363d;
+            padding-bottom: 10px;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        /* ระบบแท็บเลือกหน้า */
+        .tab-container {
+            display: flex;
+            width: 100%;
+            max-width: 800px;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .tab-btn {
+            flex: 1;
+            background-color: #161b22;
+            color: #8b949e;
+            border: 1px solid #30363d;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            background-color: #21262d;
+            color: #c9d1d9;
+        }
+        .tab-btn.active {
+            background-color: #1f6feb;
+            color: #ffffff;
+            border-color: #1f6feb;
+        }
+        .control-panel {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 0 0 8px 8px;
+            padding: 20px;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-sizing: border-box;
+        }
+        label {
+            font-weight: bold;
+            color: #8b949e;
+            display: block;
+            margin-bottom: 5px;
+        }
+        select {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+        }
+        select:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+        .display-area {
+            background-color: #000000;
+            border: 2px solid #30363d;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 800px;
+            min-height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        img.signal-img {
+            width: 350px; 
+            height: 350px; 
+            object-fit: contain; 
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        .status-text {
+            color: #8b949e;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🖥️ ระบบจำลองอาณัติสัญญาณ CTC</h1>
+
+    <div class="tab-container">
+        <button class="tab-btn active" onclick="switchPage('page1')" id="btn-page1">หน้า 1: ระบบสัญญาณไฟ</button>
+        <button class="tab-btn" onclick="switchPage('page2')" id="btn-page2">หน้า 2: เครื่องทางสะดวก</button>
+        <button class="tab-btn" onclick="switchPage('page3')" id="btn-page3">หน้า 3: ระบบประแจ</button>
+    </div>
+
+    <div class="control-panel">
+        <div id="categoryGroup">
+            <label for="categorySelect">หมวดหมู่สัญญาณ:</label>
+            <select id="categorySelect" onchange="updateStateDropdown()"></select>
+        </div>
+        <div>
+            <label for="stateSelect">เลือกท่า (สถานะ):</label>
+            <select id="stateSelect" onchange="displaySignal()"></select>
+        </div>
+    </div>
+
+    <div class="display-area" id="imageDisplayArea"></div>
+    <div class="status-text" id="statusText">กรุณาเลือกสัญญาณ</div>
+
+    <script>
+        const ctcData = {
+            "page1": {
+                "cat1": {
+                    name: "1. สัญญาณ 3 ท่า",
+                    states: [
+                        { name: "1.1 ท่าห้าม", files: ["1-1.png"], blink: false },
+                        { name: "1.2 ท่าระวัง", files: ["1-2.png"], blink: false },
+                        { name: "1.3 ท่าระวังซ้าย", files: ["1-3.png"], blink: false },
+                        { name: "1.4 ท่าระวังขวา", files: ["1-4.png"], blink: false },
+                        { name: "1.5 ท่าอนุญาต", files: ["1-5.png"], blink: false },
+                        { name: "1.6 ท่าสัญญาณหลอดหลักขัดข้อง (กระพริบ)", files: ["1-6.png", "1-1.png"], blink: true },
+                        { name: "1.7 ท่าสัญญาณขัดข้อง", files: ["1-7.png"], blink: false },
+                        { name: "1.8 ท่าห้ามรอการเปลี่ยนไปอยู่ในท่าระวัง (กระพริบ)", files: ["1-8.png", "1-1.png"], blink: true }
+                    ]
+                },
+                "cat2": {
+                    name: "2. สัญญาณพิเศษ (สับเปลี่ยน)",
+                    states: [
+                        { name: "2.1 สัญญาณสับเปลี่ยนอยู่ในท่าห้าม", files: ["2-1.png"], blink: false },
+                        { name: "2.2 สัญญาณสับเปลี่ยนอยู่ในท่าอนุญาต", files: ["2-2.png"], blink: false },
+                        { name: "2.3 ท่าห้ามรอคอยการเปลี่ยนเป็นท่าอนุญาต (กระพริบ)", files: ["2-1.png", "2-2.png"], blink: true }
+                    ]
+                },
+                "cat3": {
+                    name: "3. สัญญาณสับเปลี่ยนต่ำ",
+                    states: [
+                        { name: "3.1 สัญญาณสับเปลี่ยนต่ำท่าห้าม", files: ["3-1.png"], blink: false },
+                        { name: "3.2 สัญญาณสับเปลี่ยนต่ำท่าอนุญาต", files: ["3-2.png"], blink: false },
+                        { name: "3.3 สัญญาณสับเปลี่ยนต่ำขัดข้อง", files: ["3-3.png"], blink: false }
+                    ]
+                },
+                "cat4": {
+                    name: "4. สัญญาณเรียกเข้า",
+                    states: [
+                        { name: "4.1 สัญญาณเรียกเข้าอยู่ในท่าห้าม", files: ["4-1.png"], blink: false },
+                        { name: "4.2 สัญญาณเรียกเข้าอยู่ในท่าอนุญาต", files: ["4-2.png"], blink: false },
+                        { name: "4.3 ท่าห้ามรอคอยการเปลี่ยนเป็นท่าอนุญาต (กระพริบ)", files: ["4-1.png", "4-2.png"], blink: true }
+                    ]
+                },
+                "cat5": {
+                    name: "5. สัญญาณเรียกเข้า (ร่วมกับเสาสับเปลี่ยน)",
+                    states: [
+                        { name: "5.1 สัญญาณเรียกเข้าอยู่ในท่าห้าม", files: ["2-1.png"], blink: false },
+                        { name: "5.2 สัญญาณเรียกเข้าอยู่ในท่าอนุญาต", files: ["5-2.png"], blink: false },
+                        { name: "5.3 ท่าห้ามรอคอยการเปลี่ยนเป็นท่าอนุญาต (กระพริบ)", files: ["5-3.png", "5-2.png"], blink: true }
+                    ]
+                }
+            },
+            "page2": {
+                "cat6": {
+                    name: "6. หมวดเครื่องทางสะดวก",
+                    states: [
+                        { name: "6.1 เครื่องทางสะดวกอยู่ในท่าปกติ", files: ["6-1.png"], blink: false },
+                        { name: "6.2 เครื่องทางสะดวกอยู่ในท่าขบวนจะถึง", files: ["6-2.png"], blink: false },
+                        { name: "6.3 เครื่องทางสะดวกอยู่ในท่าขบวนรถออก", files: ["6-3.png"], blink: false },
+                        // อัปเดตไฟกระพริบหมวด 6 ตามคำขอ
+                        { name: "6.4 เครื่องทางสะดวกขัดข้อง (กระพริบ)", files: ["6-1.png", "6-0.png"], blink: true },
+                        { name: "6.5 เครื่องทางสะดวกขัดข้องจากสถานีข้างเคียง (กระพริบ)", files: ["6-5-2.png", "6-0.png"], blink: true },
+                        { name: "6.6 เครื่องทางสะดวกถูกปิด (กระพริบ)", files: ["6-6-1.png", "6-6-2.png"], blink: true },
+                        { name: "6.7 เครื่องทางสะดวกถูกนำกุญแจทางสะดวกออกไป (กระพริบ)", files: ["6-7.png", "6-0.png"], blink: true }
+                    ]
+                }
+            },
+            "page3": {
+                "cat7": {
+                    name: "7. หมวดระบบประแจ",
+                    states: [
+                        { name: "7.1 ประแจอยู่ในท่าทางตรง", files: ["7-1.png"], blink: false },
+                        // อัปเดตไฟกระพริบหมวด 7 ตามคำขอ
+                        { name: "7.2 ประแจอยู่ในท่าทางเลี้ยว (กระพริบ)", files: ["7-4.png", "7-2.png"], blink: true },
+                        { name: "7.3 ประแจกำลังกลับไปท่าทางเลี้ยว (กระพริบ)", files: ["7-3.png", "7-1.png"], blink: true },
+                        { name: "7.4 ประแจกำลังกลับไปท่าทางตรง (กระพริบ)", files: ["7-4.png", "7-2.png"], blink: true },
+                        { name: "7.5 ประแจถูกเตรียมทางในท่าทางเลี้ยว", files: ["7-5.png"], blink: false },
+                        { name: "7.6 ประแจถูกเตรียมทางในท่าทางตรง", files: ["7-6.png"], blink: false },
+                        { name: "7.7 ประแจไม่สามารถตรวจสอบได้ว่าอยู่ในท่าตรง (กระพริบ)", files: ["7-3.png", "7-1.png"], blink: true },
+                        { name: "7.8 ประแจไม่สามารถตรวจสอบได้ว่าอยู่ในท่าทางเลี้ยว", files: ["7-3.png"], blink: false }, 
+                        { name: "7.9 ประแจถูกรีดในท่าทางตรงโดยไม่มีรถครอบครอง", files: ["7-9.png"], blink: false },
+                        { name: "7.10 ประแจถูกรีดในท่าทางเลี้ยวโดยไม่มีรถครอบครอง", files: ["7-10.png"], blink: false },
+                        { name: "7.11 ประแจถูกรีดในท่าทางตรงโดยมีรถครอบครอง", files: ["7-11.png"], blink: false },
+                        { name: "7.12 ประแจถูกรีดในท่าทางเลี้ยวโดยมีรถครอบครอง", files: ["7-12.png"], blink: false },
+                        { name: "7.13 ประแจได้ถูกนำมือหมุนออกจากกล่องมือหมุนประแจ", files: ["7-13.png"], blink: false },
+                        { name: "7.14 ประแจถูกปิด", files: ["7-14.png"], blink: false }
+                    ]
+                }
+            }
+        };
+
+        let currentPage = "page1";
+        const catSelect = document.getElementById("categorySelect");
+        const stateSelect = document.getElementById("stateSelect");
+        const displayArea = document.getElementById("imageDisplayArea");
+        const statusText = document.getElementById("statusText");
+        const categoryGroup = document.getElementById("categoryGroup");
+        
+        let blinkInterval = null;
+
+        window.onload = function() {
+            switchPage('page1');
+        };
+
+        function switchPage(pageId) {
+            currentPage = pageId;
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + pageId).classList.add('active');
+
+            catSelect.innerHTML = "";
+            let pageCategories = ctcData[currentPage];
+            
+            let catKeys = Object.keys(pageCategories);
+            if (catKeys.length <= 1) {
+                categoryGroup.style.display = "none";
+            } else {
+                categoryGroup.style.display = "block";
+            }
+
+            for (let key in pageCategories) {
+                let option = document.createElement("option");
+                option.value = key;
+                option.text = pageCategories[key].name;
+                catSelect.appendChild(option);
+            }
+
+            updateStateDropdown();
+        }
+
+        function updateStateDropdown() {
+            stateSelect.innerHTML = "";
+            let selectedCat = catSelect.value;
+            
+            if(!selectedCat) {
+                selectedCat = Object.keys(ctcData[currentPage])[0];
+            }
+
+            let states = ctcData[currentPage][selectedCat].states;
+
+            states.forEach((state, index) => {
+                let option = document.createElement("option");
+                option.value = index;
+                option.text = state.name;
+                stateSelect.appendChild(option);
+            });
+            displaySignal();
+        }
+
+        function displaySignal() {
+            displayArea.innerHTML = "";
+            clearInterval(blinkInterval);
+
+            let selectedCat = catSelect.value;
+            if(!selectedCat) {
+                selectedCat = Object.keys(ctcData[currentPage])[0];
+            }
+            
+            let stateIndex = stateSelect.value;
+            if(!stateIndex) stateIndex = 0;
+
+            let signalInfo = ctcData[currentPage][selectedCat].states[stateIndex];
+            statusText.innerText = "กำลังแสดง: " + signalInfo.name;
+
+            let img = document.createElement("img");
+            img.className = "signal-img";
+            img.src = signalInfo.files[0];
+            img.alt = "Signal Image";
+            displayArea.appendChild(img);
+
+            if (signalInfo.blink && signalInfo.files.length === 2) {
+                let currentImageIndex = 0;
+                blinkInterval = setInterval(() => {
+                    currentImageIndex = currentImageIndex === 0 ? 1 : 0;
+                    img.src = signalInfo.files[currentImageIndex];
+                }, 600); 
+            }
+        }
+    </script>
+</body>
+</html>
